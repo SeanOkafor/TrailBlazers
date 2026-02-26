@@ -84,6 +84,9 @@ public class MainWindow {
 	 
 	 // Menu music
 	 private static Clip menuMusicClip;
+	 
+	 // Level 1 music
+	 private static Clip level1MusicClip;
 	  
 	public MainWindow() {
 	        frame.setSize(1000, 1000);
@@ -291,6 +294,7 @@ public class MainWindow {
 		level1Running = false;
 		level2Running = false;
 		frame.setTitle("Trail Blazers");
+		stopLevel1Music();  // stop level music when returning to menu
 		startMenuMusic();  // resume menu music when returning from levels
 	}
 	
@@ -348,6 +352,7 @@ public class MainWindow {
 		level2Running = false;
 		frame.setTitle("Trail Blazers - Level 1");
 		stopMenuMusic();  // stop menu music when entering a level
+		startLevel1Music();  // start level 1 music
 	}
 	
 	// Show Level 2 (parallax scrolling industrial background)
@@ -400,6 +405,30 @@ public class MainWindow {
 			menuMusicClip.stop();
 			menuMusicClip.close();  // release audio resources
 			menuMusicClip = null;
+		}
+	}
+	
+	// ========== LEVEL 1 MUSIC ==========
+	private static void startLevel1Music() {
+		if (level1MusicClip != null && level1MusicClip.isRunning()) return;
+		
+		try {
+			File musicFile = new File("res/Music/level1music.wav");
+			AudioInputStream audioIn = AudioSystem.getAudioInputStream(musicFile);
+			level1MusicClip = AudioSystem.getClip();
+			level1MusicClip.open(audioIn);
+			level1MusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+		} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+			System.err.println("Error loading level 1 music: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
+	private static void stopLevel1Music() {
+		if (level1MusicClip != null && level1MusicClip.isRunning()) {
+			level1MusicClip.stop();
+			level1MusicClip.close();
+			level1MusicClip = null;
 		}
 	}
 

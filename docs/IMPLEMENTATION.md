@@ -195,3 +195,22 @@ Both levels use a parallax scrolling technique implemented in `Level1Panel.java`
 - Both panels animate at ~100 FPS via the main game loop
 - Added detailed code comments explaining how the parallax animation system works
 - Updated all show/hide methods to handle Level 1 and Level 2 panel visibility
+
+### February 26, 2026 — Menu Music
+- Added looping background music (`res/Music/awesomeness.wav`) on menu screens
+- Music plays on main screen, controls screen, and level selection screen
+- Music stops when entering Level 1 or Level 2 (levels will have their own music)
+- Music resumes when returning to main screen from a level
+
+---
+
+## References
+
+All assets listed below are by **ansimuz** on [OpenGameArt.org](https://opengameart.org), licensed under their respective open licenses.
+
+| Asset | Source | Usage |
+|-------|--------|-------|
+| Menu Music | [Menu Music](https://opengameart.org/content/menu-music) | Background music looping on menu screens (`res/Music/awesomeness.wav`) |
+| Level 1 Background | [Mountain at Dusk Background](https://opengameart.org/content/mountain-at-dusk-background) | 5-layer parallax scrolling background for Level 1 (`parallax_mountain_pack`) |
+| Level 2 Background | [Industrial Parallax Background](https://opengameart.org/content/industrial-parallax-background) | 4-layer parallax scrolling background for Level 2 (`parallax-industrial-pack`) |
+| Main Menu Inspiration | [Warped Character Pro](https://opengameart.org/content/warped-character-pro) | Visual inspiration for the main menu screen design (`Main Screen.png`) |
