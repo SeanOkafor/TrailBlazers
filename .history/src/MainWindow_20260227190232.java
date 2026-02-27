@@ -94,8 +94,6 @@ public class MainWindow {
 	 // Player movement state (set by keyboard input, read by Player1 instances)
 	 private static boolean p1Up = false;
 	 private static boolean p1Down = false;
-	 private static boolean p2Up = false;
-	 private static boolean p2Down = false;
 	  
 	public MainWindow() {
 	        frame.setSize(1000, 1000);
@@ -306,14 +304,6 @@ public class MainWindow {
 	                        if (pressed) p1Down = true;
 	                        if (released) p1Down = false;
 	                        break;
-	                    case KeyEvent.VK_UP:
-	                        if (pressed) p2Up = true;
-	                        if (released) p2Up = false;
-	                        break;
-	                    case KeyEvent.VK_DOWN:
-	                        if (pressed) p2Down = true;
-	                        if (released) p2Down = false;
-	                        break;
 	                }
 	                
 	                // Push movement state to whichever level's Player1 is active
@@ -326,18 +316,6 @@ public class MainWindow {
 	                if (activePlayer != null) {
 	                    activePlayer.setMovingUp(p1Up);
 	                    activePlayer.setMovingDown(p1Down);
-	                }
-	                
-	                // Push movement state to Player 2 (only exists in multiplayer)
-	                Player2 activePlayer2 = null;
-	                if (level1Running && level1Panel != null) {
-	                    activePlayer2 = level1Panel.getPlayer2();
-	                } else if (level2Running && level2Panel != null) {
-	                    activePlayer2 = level2Panel.getPlayer2();
-	                }
-	                if (activePlayer2 != null) {
-	                    activePlayer2.setMovingUp(p2Up);
-	                    activePlayer2.setMovingDown(p2Down);
 	                }
 	                
 	                return false;  // allow other listeners to also process the event
@@ -425,15 +403,8 @@ public class MainWindow {
 		if (level1Panel.getPlayer1() != null) {
 			level1Panel.getPlayer1().resetPosition();
 		}
-		// Create or remove Player 2 based on multiplayer toggle
-		level1Panel.setMultiplayer(multiplayerEnabled);
-		if (level1Panel.getPlayer2() != null) {
-			level1Panel.getPlayer2().resetPosition();
-		}
 		p1Up = false;
 		p1Down = false;
-		p2Up = false;
-		p2Down = false;
 	}
 	
 	// Show Level 2 (parallax scrolling industrial background)
@@ -458,15 +429,8 @@ public class MainWindow {
 		if (level2Panel.getPlayer1() != null) {
 			level2Panel.getPlayer1().resetPosition();
 		}
-		// Create or remove Player 2 based on multiplayer toggle
-		level2Panel.setMultiplayer(multiplayerEnabled);
-		if (level2Panel.getPlayer2() != null) {
-			level2Panel.getPlayer2().resetPosition();
-		}
 		p1Up = false;
 		p1Down = false;
-		p2Up = false;
-		p2Down = false;
 	}
 	
 	// Getter for multiplayer state

@@ -52,9 +52,6 @@ public class Level1Panel extends JPanel {
 	// Player 1 sprite (always loaded, regardless of multiplayer mode)
 	private Player1 player1;
 	
-	// Player 2 sprite (only loaded when multiplayer is enabled)
-	private Player2 player2;
-	
 	// Parallax layers (back to front)
 	private BufferedImage bgLayer;           // sky background (slowest)
 	private BufferedImage mountainFarLayer;   // distant mountains
@@ -89,20 +86,6 @@ public class Level1Panel extends JPanel {
 		return player1;
 	}
 	
-	/** Returns the Player2 instance (may be null if multiplayer is off). */
-	public Player2 getPlayer2() {
-		return player2;
-	}
-	
-	/** Creates or removes Player 2 based on multiplayer toggle. */
-	public void setMultiplayer(boolean enabled) {
-		if (enabled) {
-			if (player2 == null) player2 = new Player2();
-		} else {
-			player2 = null;
-		}
-	}
-	
 	private void loadLayers() {
 		String basePath = "res/New Graphics/parallax_mountain_pack/parallax_mountain_pack/layers/";
 		try {
@@ -132,10 +115,6 @@ public class Level1Panel extends JPanel {
 		if (player1 != null) {
 			player1.update();
 		}
-		// Update Player 2 animation and movement (only exists in multiplayer)
-		if (player2 != null) {
-			player2.update();
-		}
 	}
 	
 	@Override
@@ -156,10 +135,6 @@ public class Level1Panel extends JPanel {
 		// Draw Player 1 on top of all parallax layers
 		if (player1 != null) {
 			player1.draw(g2d);
-		}
-		// Draw Player 2 (only in multiplayer mode)
-		if (player2 != null) {
-			player2.draw(g2d);
 		}
 	}
 	
