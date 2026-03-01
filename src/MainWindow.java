@@ -91,11 +91,20 @@ public class MainWindow {
 	 // Level 1 music
 	 private static Clip level1MusicClip;
 	 
+	 // Level 2 music
+	 private static Clip level2MusicClip;
+	 
 	 // Player movement state (set by keyboard input, read by Player1 instances)
 	 private static boolean p1Up = false;
 	 private static boolean p1Down = false;
 	 private static boolean p2Up = false;
 	 private static boolean p2Down = false;
+	 
+	 // Shoot key state — tracks whether the key is currently held down
+	 // Used to prevent holding: only fire on the initial press (KEY_PRESSED),
+	 // not on repeated KEY_PRESSED events while the key is held
+	 private static boolean p1ShootHeld = false;
+	 private static boolean p2ShootHeld = false;
 	  
 	public MainWindow() {
 	        frame.setSize(1000, 1000);
@@ -314,6 +323,50 @@ public class MainWindow {
 	                        if (pressed) p2Down = true;
 	                        if (released) p2Down = false;
 	                        break;
+	                    case KeyEvent.VK_G:
+	                        // Player 1 shoot — only fire on initial press, not while held
+	                        if (pressed && !p1ShootHeld) {
+	                            p1ShootHeld = true;
+	                            // Get the active Player 1 from whichever level is running
+	                            Player1 shooter1 = null;
+	                            if (level1Running && level1Panel != null) {
+	                                shooter1 = level1Panel.getPlayer1();
+	                            } else if (level2Running && level2Panel != null) {
+	                                shooter1 = level2Panel.getPlayer1();
+	                            }
+	                            if (shooter1 != null && shooter1.isAlive()) {
+	                                Projectile proj = shooter1.shoot();
+	                                if (level1Running && level1Panel != null) {
+	                                    level1Panel.addProjectile(proj);
+	                                } else if (level2Running && level2Panel != null) {
+	                                    level2Panel.addProjectile(proj);
+	                                }
+	                            }
+	                        }
+	                        if (released) p1ShootHeld = false;
+	                        break;
+	                    case KeyEvent.VK_L:
+	                        // Player 2 shoot — only fire on initial press, not while held
+	                        if (pressed && !p2ShootHeld) {
+	                            p2ShootHeld = true;
+	                            // Get the active Player 2 from whichever level is running
+	                            Player2 shooter2 = null;
+	                            if (level1Running && level1Panel != null) {
+	                                shooter2 = level1Panel.getPlayer2();
+	                            } else if (level2Running && level2Panel != null) {
+	                                shooter2 = level2Panel.getPlayer2();
+	                            }
+	                            if (shooter2 != null && shooter2.isAlive()) {
+	                                Projectile proj = shooter2.shoot();
+	                                if (level1Running && level1Panel != null) {
+	                                    level1Panel.addProjectile(proj);
+	                                } else if (level2Running && level2Panel != null) {
+	                                    level2Panel.addProjectile(proj);
+	                                }
+	                            }
+	                        }
+	                        if (released) p2ShootHeld = false;
+	                        break;
 	                }
 	                
 	                // Push movement state to whichever level's Player1 is active
@@ -363,6 +416,7 @@ public class MainWindow {
 		level2Running = false;
 		frame.setTitle("Trail Blazers");
 		stopLevel1Music();  // stop level music when returning to menu
+		stopLevel2Music();  // stop level 2 music when returning to menu
 		startMenuMusic();  // resume menu music when returning from levels
 	}
 	
@@ -430,10 +484,14 @@ public class MainWindow {
 		if (level1Panel.getPlayer2() != null) {
 			level1Panel.getPlayer2().resetPosition();
 		}
+		// Reset level timer for scoring
+		level1Panel.resetTimer();
 		p1Up = false;
 		p1Down = false;
 		p2Up = false;
 		p2Down = false;
+		p1ShootHeld = false;
+		p2ShootHeld = false;
 	}
 	
 	// Show Level 2 (parallax scrolling industrial background)
@@ -454,6 +512,7 @@ public class MainWindow {
 		level2Running = true;
 		frame.setTitle("Trail Blazers - Level 2");
 		stopMenuMusic();  // stop menu music when entering a level
+		startLevel2Music();  // start level 2 music
 		// Reset Player 1 to spawn position for this level
 		if (level2Panel.getPlayer1() != null) {
 			level2Panel.getPlayer1().resetPosition();
@@ -463,10 +522,14 @@ public class MainWindow {
 		if (level2Panel.getPlayer2() != null) {
 			level2Panel.getPlayer2().resetPosition();
 		}
+		// Reset level timer for scoring
+		level2Panel.resetTimer();
 		p1Up = false;
 		p1Down = false;
 		p2Up = false;
 		p2Down = false;
+		p1ShootHeld = false;
+		p2ShootHeld = false;
 	}
 	
 	// Getter for multiplayer state
@@ -523,6 +586,30 @@ public class MainWindow {
 			level1MusicClip.stop();
 			level1MusicClip.close();
 			level1MusicClip = null;
+		}
+	}
+	
+	// ========== LEVEL 2 MUSIC ==========
+	private static void startLevel2Music() {
+		if (level2MusicClip != null && level2MusicClip.isRunning()) return;
+		
+		try {
+			File musicFile = new File("res/Music/Orbital Colossus.wav");
+			AudioInputStream audioIn = AudioSystem.getAudioInputStream(musicFile);
+			level2MusicClip = AudioSystem.getClip();
+			level2MusicClip.open(audioIn);
+			level2MusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+		} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+			System.err.println("Error loading level 2 music: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
+	private static void stopLevel2Music() {
+		if (level2MusicClip != null && level2MusicClip.isRunning()) {
+			level2MusicClip.stop();
+			level2MusicClip.close();
+			level2MusicClip = null;
 		}
 	}
 

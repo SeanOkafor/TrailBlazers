@@ -37,6 +37,9 @@ BasicGameTemplate/
 │   ├── MainWindow.java    - Main entry point, screen navigation, and game loop
 │   ├── Level1Panel.java   - Level 1 parallax scrolling background (mountain theme)
 │   ├── Level2Panel.java   - Level 2 parallax scrolling background (industrial theme)
+│   ├── Player1.java       - Player 1 animated sprite, movement, combat & shooting
+│   ├── Player2.java       - Player 2 animated sprite, movement, combat & shooting
+│   ├── Projectile.java    - Animated projectile (regular & special attacks)
 │   ├── Controller.java    - Handles keyboard input (singleton pattern)
 │   ├── Model.java         - Game logic and state
 │   ├── Viewer.java        - Rendering and display
@@ -50,6 +53,8 @@ BasicGameTemplate/
 │       ├── Main Screen.png          - Main menu screen (1152x928)
 │       ├── ControlsScreen.png       - Controls screen (1152x928)
 │       ├── Level Selection.png      - Level selection screen (1344x800)
+│       ├── Player1Sprites/          - Player 1 flight, attack, and special sprites
+│       ├── Player2Sprites/          - Player 2 flight, attack, and special sprites
 │       ├── parallax_mountain_pack/  - Level 1 background layers (5 layers, 272x160 / 544x160)
 │       └── parallax-industrial-pack/ - Level 2 background layers (4 layers, 213-272 x 104-160)
 ├── docs/
@@ -159,7 +164,7 @@ Both levels use a parallax scrolling technique implemented in `Level1Panel.java`
 |--------|----------|----------|
 | Move Up | W | Up Arrow |
 | Move Down | S | Down Arrow |
-| Shoot | G | L |
+| Shoot (Regular/Special) | G | L |
 
 ### MVC Architecture
 - **Model** (`Model.java`) — Manages game state, player, enemies, bullets, collision detection, score
@@ -207,16 +212,71 @@ Both levels use a parallax scrolling technique implemented in `Level1Panel.java`
 - Music starts when entering Level 1, stops when returning to main screen
 - Uses same `javax.sound.sampled.Clip` system as menu music
 
+### February 28, 2026 — Level 2 Music
+- Added looping background music (`res/Music/Orbital Colossus.wav`) for Level 2
+- Music starts when entering Level 2, stops when returning to main screen
+- Uses same `javax.sound.sampled.Clip` system as menu and Level 1 music
+
+### February 28, 2026 — Game Stats, Timer & Scoring System
+- **Health Points (HP)**: Both Player 1 and Player 2 start each level with 5 HP
+  - HP is displayed on the HUD as filled/empty hearts (♥♡)
+  - Player 1 HP shown in red (top-left), Player 2 HP in blue (below P1)
+  - `takeDamage(amount)` reduces HP; `isAlive()` checks if HP > 0
+- **Damage Dealt**: Each player tracks total damage dealt per level
+  - Resets when entering or replaying any level
+  - `addDamageDealt(amount)` accumulates; `getDamageDealt()` retrieves total
+  - Not displayed on screen — used internally for score calculation
+- **Level Timer**: Visible timer displayed at the top-centre of each level
+  - Format: `Time: MM:SS` — starts at 00:00 when entering a level
+  - Resets when entering/replaying a level via `resetTimer()`
+- **Score Calculation** (per player, per level):
+  - Formula: `score = (damageDealt × DAMAGE_MULTIPLIER) − (elapsedSeconds × TIME_PENALTY)`
+  - Current constants: `DAMAGE_MULTIPLIER = 100.0`, `TIME_PENALTY = 5.0`
+  - Minimum score is 0 (cannot go negative)
+  - Useful for multiplayer score comparison and single-player performance tracking
+- All stats (HP, damageDealt, timer) reset via `resetPosition()` and `resetTimer()` on level entry
+- Position accessors added to both players: `getX()`, `getY()`, `getDisplayWidth()`, `getDisplayHeight()`
+
+### March 1, 2026 — Attack System (Regular & Special Projectiles)
+- **Created `Projectile.java`** — animated projectile class for both attack types
+  - 3 sprite frames animated in a ping-pong pattern: 1 → 2 → 3 → 2 → 1 → 2 → ...
+  - Flies horizontally to the right at 8 px/frame (800 px/sec at 100 FPS)
+  - Regular attacks display at 60×30 pixels; special attacks at 100×50 pixels
+  - Removed automatically when flying off the right edge of the screen (x > 1000)
+  - Stores owner player (1 or 2) and damage value for future collision/scoring
+- **Regular Attack**: Press G (P1) or L (P2) to fire
+  - Deals 100 damage on hit
+  - Sprites: `P1attack-1/2/3.png` and `P2attack-1/2/3.png`
+- **Special Attack**: Automatically fires instead of regular when charge is full
+  - Deals 1000 damage on hit
+  - Unlocked after accumulating 1500 damage from regular attacks hitting enemies
+  - Charge resets to 0 after firing a special
+  - Sprites: `P1Special-1.png`, `P1special-2/3.png` and `P2special-1/2/3.png`
+- **Press-only input** (no holding): Each tap of the shoot key fires exactly one shot
+  - Tracked via `p1ShootHeld` / `p2ShootHeld` booleans in the `KeyEventDispatcher`
+  - Fire only on the initial KEY_PRESSED; ignore repeats while held
+  - Reset on KEY_RELEASED to allow the next shot
+- **Level panel integration**: Both `Level1Panel` and `Level2Panel` maintain a
+  `List<Projectile>` that is updated (move + animate) and rendered each frame
+  - Projectiles cleared on level entry via `resetTimer()`
+  - `addProjectile()` and `getProjectiles()` methods for shooting and collision
+- **Player class updates**: Both `Player1` and `Player2` now load attack sprites,
+  track `specialCharge`, and provide a `shoot()` method that returns a `Projectile`
+  - `shoot()` checks charge and auto-selects regular vs special
+  - `addSpecialCharge(amount)` called when regular attacks hit enemies (future)
+  - `specialCharge` resets on level entry via `resetPosition()`
+
 ---
 
 ## References
 
-All assets listed below are by **ansimuz** on [OpenGameArt.org](https://opengameart.org), licensed under their respective open licenses.
+All assets listed below are by **ansimuz** on [OpenGameArt.org](https://opengameart.org), licensed under their respective open licenses (unless otherwise noted).
 
 | Asset | Source | Usage |
 |-------|--------|-------|
 | Menu Music | [Menu Music](https://opengameart.org/content/menu-music) | Background music looping on menu screens (`res/Music/awesomeness.wav`) |
 | Level 1 Music | [Level 1 Music (YouTube)](https://www.youtube.com/watch?v=bvuJLEX6BBs) | Looping background music for Level 1 (`res/Music/level1music.wav`) |
+| Level 2 Music | [Space Boss Battle Theme](https://opengameart.org/content/space-boss-battle-theme) by **Matthew Pablo** | Looping background music for Level 2 (`res/Music/Orbital Colossus.wav`) |
 | Level 1 Background | [Mountain at Dusk Background](https://opengameart.org/content/mountain-at-dusk-background) | 5-layer parallax scrolling background for Level 1 (`parallax_mountain_pack`) |
 | Level 2 Background | [Industrial Parallax Background](https://opengameart.org/content/industrial-parallax-background) | 4-layer parallax scrolling background for Level 2 (`parallax-industrial-pack`) |
 | Main Menu Inspiration | [Warped Character Pro](https://opengameart.org/content/warped-character-pro) | Visual inspiration for the main menu screen design (`Main Screen.png`) |

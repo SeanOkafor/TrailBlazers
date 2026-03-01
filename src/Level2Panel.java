@@ -1,8 +1,13 @@
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
@@ -55,6 +60,18 @@ public class Level2Panel extends JPanel {
 	// Player 2 sprite (only loaded when multiplayer is enabled)
 	private Player2 player2;
 	
+	// ========== ACTIVE PROJECTILES ==========
+	// All projectiles currently flying across this level
+	// Updated and drawn each frame; removed when off-screen or on enemy hit
+	private List<Projectile> projectiles = new ArrayList<>();
+	
+	// ========== LEVEL TIMER & SCORING ==========
+	private long levelStartTime = 0;
+	private double elapsedSeconds = 0;
+	
+	private static final double DAMAGE_MULTIPLIER = 100.0;
+	private static final double TIME_PENALTY = 5.0;
+	
 	// Parallax layers (back to front) - 4 layers for industrial theme
 	private BufferedImage bgLayer;             // sky/gradient background (slowest)
 	private BufferedImage farBuildingsLayer;    // distant factory silhouettes
@@ -100,6 +117,31 @@ public class Level2Panel extends JPanel {
 		}
 	}
 	
+	public void resetTimer() {
+		levelStartTime = System.currentTimeMillis();
+		elapsedSeconds = 0;
+		projectiles.clear();  // remove any leftover projectiles from previous play
+	}
+	
+	public double getElapsedSeconds() {
+		return elapsedSeconds;
+	}
+	
+	public int calculateScore(int damageDealt) {
+		double raw = (damageDealt * DAMAGE_MULTIPLIER) - (elapsedSeconds * TIME_PENALTY);
+		return Math.max(0, (int) raw);
+	}
+	
+	/** Adds a projectile to the active list (called when a player shoots). */
+	public void addProjectile(Projectile p) {
+		projectiles.add(p);
+	}
+	
+	/** Returns the list of active projectiles (for collision detection). */
+	public List<Projectile> getProjectiles() {
+		return projectiles;
+	}
+	
 	private void loadLayers() {
 		String basePath = "res/New Graphics/parallax-industrial-pack/parallax-industrial-pack/layers/";
 		try {
@@ -123,6 +165,11 @@ public class Level2Panel extends JPanel {
 		buildingsOffset += BUILDINGS_SPEED;
 		foregroundOffset += FOREGROUND_SPEED;
 		
+		// Update elapsed time
+		if (levelStartTime > 0) {
+			elapsedSeconds = (System.currentTimeMillis() - levelStartTime) / 1000.0;
+		}
+		
 		// Update Player 1 animation and movement each frame
 		if (player1 != null) {
 			player1.update();
@@ -130,6 +177,17 @@ public class Level2Panel extends JPanel {
 		// Update Player 2 animation and movement (only exists in multiplayer)
 		if (player2 != null) {
 			player2.update();
+		}
+		
+		// Update all active projectiles (move right + animate)
+		// Remove any that have flown off the right edge of the screen
+		Iterator<Projectile> it = projectiles.iterator();
+		while (it.hasNext()) {
+			Projectile p = it.next();
+			p.update();
+			if (p.isOffScreen()) {
+				it.remove();
+			}
 		}
 	}
 	
@@ -155,6 +213,47 @@ public class Level2Panel extends JPanel {
 		if (player2 != null) {
 			player2.draw(g2d);
 		}
+		
+		// Draw all active projectiles on top of players
+		for (Projectile p : projectiles) {
+			p.draw(g2d);
+		}
+		
+		// ========== DRAW HUD (timer + HP) ==========
+		drawHUD(g2d);
+	}
+	
+	private void drawHUD(Graphics2D g2d) {
+		int minutes = (int) (elapsedSeconds / 60);
+		int seconds = (int) (elapsedSeconds % 60);
+		String timeText = String.format("Time: %02d:%02d", minutes, seconds);
+		
+		g2d.setFont(new Font("Arial", Font.BOLD, 35));
+		g2d.setColor(Color.WHITE);
+		int timeWidth = g2d.getFontMetrics().stringWidth(timeText);
+		g2d.drawString(timeText, (getWidth() - timeWidth) / 2, 40);
+		
+		if (player1 != null) {
+			String p1Text = "P1 HP: " + buildHPString(player1.getHp(), player1.getMaxHp());
+			g2d.setFont(new Font("Arial", Font.BOLD, 28));
+			g2d.setColor(Color.RED);
+			g2d.drawString(p1Text, 15, 80);
+		}
+		
+		if (player2 != null) {
+			String p2Text = "P2 HP: " + buildHPString(player2.getHp(), player2.getMaxHp());
+			g2d.setFont(new Font("Arial", Font.BOLD, 28));
+			g2d.setColor(Color.BLUE);
+			g2d.drawString(p2Text, 15, 115);
+		}
+	}
+	
+	private String buildHPString(int current, int max) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < max; i++) {
+			sb.append(i < current ? "\u2665" : "\u2661");
+		}
+		return sb.toString();
 	}
 	
 	/**
