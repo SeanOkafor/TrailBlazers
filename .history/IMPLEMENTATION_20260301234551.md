@@ -1,0 +1,179 @@
+# Implementation Documentation
+
+## Project: Basic Game Template
+**Repository:** https://github.com/SeanOkafor/GameDevAssignment1.git
+
+---
+
+## Running the Application
+
+### Prerequisites
+- Java JDK 21 (or compatible version)
+- Git (for version control)
+
+### Compilation
+To compile the project from the root directory:
+
+```powershell
+cd src
+javac util/*.java
+javac *.java
+cd ..
+```
+
+### Running the Game
+From the project root directory:
+
+```powershell
+java -classpath src MainWindow
+```
+
+### Game Controls
+- **W** - Move up
+- **A** - Move left
+- **S** - Move down
+- **D** - Move right
+- **Space** - Shoot
+
+---
+
+## Project Structure
+```
+BasicGameTemplate/
+├── src/
+│   ├── MainWindow.java    - Main entry point, screen navigation, and game loop
+│   ├── Controller.java    - Handles keyboard input (singleton pattern)
+│   ├── Model.java         - Game logic and state
+│   ├── Viewer.java        - Rendering and display
+│   └── util/
+│       ├── GameObject.java
+│       ├── Point3f.java
+│       ├── Vector3f.java
+│       └── UnitTests.java
+├── res/
+│   └── New Graphics/
+│       ├── Main Screen.png          - Main menu screen (1152x928)
+│       ├── ControlsScreen.png       - Controls screen (1152x928)
+│       ├── Level Selection.png      - Level selection screen (1344x800)
+│       ├── parallax-industrial-pack/ - Parallax background assets
+│       └── parallax_mountain_pack/   - Parallax background assets
+├── REQUIREMENTS.md        - Full game design document
+├── IMPLEMENTATION.md      - This file
+└── bin/                   - Compiled classes (gitignored)
+```
+
+---
+
+## Game: Trail Blazers
+A horizontal side-scrolling game inspired by Jetpack Joyride and Geometry Dash. The game features a multi-screen navigation system with pre-designed screen images and transparent button overlays.
+
+---
+
+## Implementation Changes
+
+### Initial Setup (February 19, 2026)
+- Initialized Git repository
+- Created .gitignore for Java projects
+- Connected to GitHub repository
+- Initial commit with basic MVC game template
+
+### Screen Navigation System (February 26, 2026)
+
+#### Overview
+Implemented a full screen navigation system with three screens (Main Screen, Controls Screen, Level Selection Screen) using transparent JButton overlays positioned on top of pre-designed PNG images. Each screen image is scaled from its original resolution to fit the 1000x1000 game window.
+
+#### Window & Title
+- Changed JFrame title from "Basic Game Engine" to **"Trail Blazers"**
+- Window size: 1000x1000 pixels
+- Layout: null (absolute positioning for precise button placement)
+
+#### Image Scaling Approach
+All screen images are loaded via `ImageIO.read()`, scaled to 1000x1000 using `Image.getScaledInstance()`, and displayed as `JLabel` with `ImageIcon`. Button coordinates from the original image are mathematically scaled to match the displayed size.
+
+- **Main Screen & Controls Screen** (1152x928 originals): `x_scale = 1000/1152`, `y_scale = 1000/928`
+- **Level Selection Screen** (1344x800 original): `x_scale = 1000/1344`, `y_scale = 1000/800`
+
+#### Transparent Button Pattern
+All buttons use the same styling to be invisible overlays on the screen artwork:
+```java
+setOpaque(false);
+setContentAreaFilled(false);
+setBorderPainted(false);
+setFocusPainted(false);
+setCursor(HAND_CURSOR);
+```
+
+#### Screens & Navigation Flow
+
+```
+Main Screen
+├── [Controls Button]      → Controls Screen
+├── [Single Player Button] → Level Selection Screen (multiplayerEnabled = false)
+└── [Multiplayer Button]   → Level Selection Screen (multiplayerEnabled = true)
+
+Controls Screen
+└── [Back Button]          → Main Screen
+
+Level Selection Screen
+└── [Back Button]          → Main Screen
+```
+
+#### Button Coordinates (scaled bounds)
+
+| Button | Screen | Original Coords | Image Size | Scaled Bounds (x, y, w, h) |
+|--------|--------|-----------------|------------|---------------------------|
+| Controls | Main | (912,832)→(1124,897) | 1152x928 | (792, 897, 184, 70) |
+| Single Player | Main | (263,833)→(560,900) | 1152x928 | (228, 897, 258, 72) |
+| Multiplayer | Main | (587,833)→(852,900) | 1152x928 | (509, 897, 230, 72) |
+| Back | Controls | (529,770)→(622,798) | 1152x928 | (459, 830, 81, 30) |
+| Back | Level Selection | (626,730)→(718,759) | 1344x800 | (466, 913, 68, 36) |
+
+#### Multiplayer Toggle
+- `private static boolean multiplayerEnabled = false;` — toggled by Single Player / Multiplayer buttons
+- `public static boolean isMultiplayerEnabled()` — getter for use by other classes (e.g., Model)
+- Single Player sets it to `false`, Multiplayer sets it to `true`
+- Both buttons navigate to the same Level Selection screen
+
+#### Key Methods Added to MainWindow.java
+- `showMainScreen()` — Shows main screen + its 3 buttons, hides everything else
+- `showControlsScreen()` — Shows controls screen + back button, hides everything else
+- `showLevelSelectionScreen()` — Shows level selection + back button, hides everything else
+
+#### Files Modified
+- **MainWindow.java** — Removed old "Start Game" button, added screen navigation system with 3 screens and 5 transparent buttons
+
+#### Files Created
+- **REQUIREMENTS.md** — Full game design document with sprite checklist, mechanics, and milestones
+
+---
+
+## Bug Fix: Tutorial Enemy Hitbox Too Large
+
+### Problem
+The Tutorial Enemy's collision hitbox used the full 395×395 display area, but the actual
+sprite content (the block) only fills roughly the centre ~195×195 pixels. This caused
+projectiles to register hits in the transparent padding surrounding the sprite.
+
+### Fix (TutorialEnemy.java)
+- Added `COLLISION_INSET_X` and `COLLISION_INSET_Y` constants (100 px each) that define
+  the transparent padding on each side of the sprite image.
+- Updated `collidesWith()` to compute a tighter hitbox:
+  ```
+  hitX = x + COLLISION_INSET_X
+  hitY = y + COLLISION_INSET_Y
+  hitW = DISPLAY_WIDTH  - 2 * COLLISION_INSET_X   (= 195)
+  hitH = DISPLAY_HEIGHT - 2 * COLLISION_INSET_Y   (= 195)
+  ```
+- AABB check now uses the inset rectangle instead of the full display area.
+
+---
+
+## Pending Work
+- Level selection buttons on the Level Selection screen (individual level buttons)
+- Actual game mechanics (auto-scrolling, obstacles, jumping)
+- Sprite replacement (player character, obstacles, backgrounds)
+- Parallax scrolling backgrounds using provided asset packs
+- Multiplayer mode implementation
+- Score system and game over screen
+
+---
