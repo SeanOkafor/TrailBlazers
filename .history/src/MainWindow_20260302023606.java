@@ -306,21 +306,6 @@ public class MainWindow {
 	                boolean pressed = (e.getID() == KeyEvent.KEY_PRESSED);
 	                boolean released = (e.getID() == KeyEvent.KEY_RELEASED);
 	                
-	                // --- SPACE BAR: return to main menu from score screen ---
-	                if (e.getKeyCode() == KeyEvent.VK_SPACE && pressed) {
-	                    // Check if the score screen is fully revealed on the active level
-	                    ScoreScreen activeScoreScreen = null;
-	                    if (level1Running && level1Panel != null) {
-	                        activeScoreScreen = level1Panel.getScoreScreen();
-	                    } else if (level2Running && level2Panel != null) {
-	                        activeScoreScreen = level2Panel.getScoreScreen();
-	                    }
-	                    if (activeScoreScreen != null && activeScoreScreen.isFullyRevealed()) {
-	                        showMainScreen();
-	                        return true;
-	                    }
-	                }
-	                
 	                switch (e.getKeyCode()) {
 	                    case KeyEvent.VK_W:
 	                        if (pressed) p1Up = true;

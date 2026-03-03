@@ -68,10 +68,6 @@ public class Level2Panel extends JPanel {
 	// ========== FINAL BOSS ==========
 	private FinalBoss finalBoss;
 	
-	// ========== SCORE SCREEN ==========
-	private ScoreScreen scoreScreen = new ScoreScreen();
-	private boolean scoreScreenTriggered = false;
-	
 	// ========== LEVEL TIMER & SCORING ==========
 	private long levelStartTime = 0;
 	private double elapsedSeconds = 0;
@@ -128,8 +124,6 @@ public class Level2Panel extends JPanel {
 		levelStartTime = System.currentTimeMillis();
 		elapsedSeconds = 0;
 		projectiles.clear();  // remove any leftover projectiles from previous play
-		scoreScreenTriggered = false;
-		scoreScreen.deactivate();
 	}
 	
 	public double getElapsedSeconds() {
@@ -159,11 +153,6 @@ public class Level2Panel extends JPanel {
 	/** Returns the Final Boss instance (may be null). */
 	public FinalBoss getFinalBoss() {
 		return finalBoss;
-	}
-	
-	/** Returns the score screen (for MainWindow to check if active). */
-	public ScoreScreen getScoreScreen() {
-		return scoreScreen;
 	}
 	
 	private void loadLayers() {
@@ -240,20 +229,6 @@ public class Level2Panel extends JPanel {
 		if (finalBoss != null && !finalBoss.isDefeated()) {
 			finalBoss.update();
 		}
-		
-		// Check if the boss was just defeated — trigger score screen
-		if (finalBoss != null && finalBoss.isDefeated() && !scoreScreenTriggered) {
-			scoreScreenTriggered = true;
-			int p1Dmg = (player1 != null) ? player1.getDamageDealt() : 0;
-			int p2Dmg = (player2 != null) ? player2.getDamageDealt() : 0;
-			boolean mp = (player2 != null);
-			scoreScreen.activate(p1Dmg, p2Dmg, elapsedSeconds, mp);
-		}
-		
-		// Update score screen reveal timer
-		if (scoreScreen.isActive()) {
-			scoreScreen.update();
-		}
 	}
 	
 	@Override
@@ -291,11 +266,6 @@ public class Level2Panel extends JPanel {
 		
 		// ========== DRAW HUD (timer + HP) ==========
 		drawHUD(g2d);
-		
-		// ========== DRAW SCORE SCREEN (on top of everything) ==========
-		if (scoreScreen.isActive()) {
-			scoreScreen.draw(g2d);
-		}
 	}
 	
 	private void drawHUD(Graphics2D g2d) {

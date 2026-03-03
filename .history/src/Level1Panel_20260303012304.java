@@ -12,29 +12,29 @@ import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 /**
- * Level2Panel - Renders a parallax scrolling industrial background for Level 2.
- * Uses 4 layers from the parallax-industrial-pack, each scrolling at different speeds.
+ * Level1Panel - Renders a parallax scrolling mountain background for Level 1.
+ * Uses 5 layers from the parallax_mountain_pack, each scrolling at different speeds.
  * 
  * ==================== HOW THE PARALLAX ANIMATION WORKS ====================
  * 
  * The parallax effect creates an illusion of depth by scrolling multiple background
  * layers at different speeds. Layers further "away" (like the sky) scroll slowly,
- * while layers closer to the "camera" (like foreground buildings) scroll faster.
+ * while layers closer to the "camera" (like foreground trees) scroll faster.
  * 
  * SETUP:
- * 1. Each layer is a small PNG image (e.g. 272x160 pixels).
+ * 1. Each layer is a small PNG image (e.g. 272x160 or 544x160 pixels).
  * 2. Each layer has its own scroll offset (a double value tracking how far it has scrolled).
  * 3. Each layer has a fixed speed (pixels per frame) - back layers are slower, front layers faster.
  * 
  * PER-FRAME UPDATE (called from the main game loop in MainWindow.java):
  * 1. updateParallax() is called, which adds each layer's speed to its offset.
- *    e.g. bgOffset += 0.2, farBuildingsOffset += 0.5, etc.
+ *    e.g. bgOffset += 0.2, mountainFarOffset += 0.5, etc.
  * 2. repaint() is called, which triggers paintComponent() to redraw the panel.
  * 
- * RENDERING (paintComponent → drawLayer for each layer, back to front):
+ * RENDERING (paintComponent -> drawLayer for each layer, back to front):
  * 1. The layer image is scaled up to fill the panel height (1000px) while
  *    maintaining its aspect ratio. This gives us the "scaledWidth" for tiling.
- *    e.g. a 272x160 image scaled to 1000px tall → scaledWidth = 272 * (1000/160) = 1700px
+ *    e.g. a 272x160 image scaled to 1000px tall -> scaledWidth = 272 * (1000/160) = 1700px
  * 
  * 2. The offset is wrapped using modulo (%) so it doesn't grow forever:
  *    wrappedOffset = offset % scaledWidth
@@ -52,7 +52,7 @@ import javax.swing.JPanel;
  * offsets increment 100 times per second, producing fluid animation.
  * =========================================================================
  */
-public class Level2Panel extends JPanel {
+public class Level1Panel extends JPanel {
 	
 	// Player 1 sprite (always loaded, regardless of multiplayer mode)
 	private Player1 player1;
@@ -65,41 +65,49 @@ public class Level2Panel extends JPanel {
 	// Updated and drawn each frame; removed when off-screen or on enemy hit
 	private List<Projectile> projectiles = new ArrayList<>();
 	
-	// ========== FINAL BOSS ==========
-	private FinalBoss finalBoss;
+	// ========== TUTORIAL ENEMY (Level 1 only) ==========
+	// The first boss encounter — a block that bobs up and down on the right side.
+	// Created when the level starts; null until then.
+	private TutorialEnemy tutorialEnemy;
 	
 	// ========== SCORE SCREEN ==========
 	private ScoreScreen scoreScreen = new ScoreScreen();
 	private boolean scoreScreenTriggered = false;
 	
 	// ========== LEVEL TIMER & SCORING ==========
+	// Tracks when the level started (System.currentTimeMillis at level entry)
 	private long levelStartTime = 0;
+	// Elapsed seconds since level started (updated each frame)
 	private double elapsedSeconds = 0;
 	
-	private static final double DAMAGE_MULTIPLIER = 100.0;
-	private static final double TIME_PENALTY = 5.0;
+	// Score formula constants: score = (damageDealt * DAMAGE_MULTIPLIER) - (seconds * TIME_PENALTY)
+	private static final double DAMAGE_MULTIPLIER = 100.0;  // points per unit of damage dealt
+	private static final double TIME_PENALTY = 5.0;          // points lost per second
 	
-	// Parallax layers (back to front) - 4 layers for industrial theme
-	private BufferedImage bgLayer;             // sky/gradient background (slowest)
-	private BufferedImage farBuildingsLayer;    // distant factory silhouettes
-	private BufferedImage buildingsLayer;       // closer industrial buildings
-	private BufferedImage foregroundLayer;      // foreground pipes/structures (fastest)
+	// Parallax layers (back to front)
+	private BufferedImage bgLayer;           // sky background (slowest)
+	private BufferedImage mountainFarLayer;   // distant mountains
+	private BufferedImage mountainsLayer;     // closer mountains
+	private BufferedImage treesLayer;         // trees
+	private BufferedImage foregroundLayer;    // foreground trees (fastest)
 	
 	// Scroll offsets - each layer tracks how many pixels it has scrolled
 	// These are doubles for sub-pixel precision (allows fractional speeds like 0.2 px/frame)
 	private double bgOffset = 0;
-	private double farBuildingsOffset = 0;
-	private double buildingsOffset = 0;
+	private double mountainFarOffset = 0;
+	private double mountainsOffset = 0;
+	private double treesOffset = 0;
 	private double foregroundOffset = 0;
 	
 	// Scroll speeds (pixels per frame) - creates the parallax depth illusion
 	// Slower = appears further away, Faster = appears closer to the viewer
 	private static final double BG_SPEED = 0.2;            // barely moves - distant sky
-	private static final double FAR_BUILDINGS_SPEED = 0.6;  // slow - far background
-	private static final double BUILDINGS_SPEED = 1.2;      // medium - mid-ground
-	private static final double FOREGROUND_SPEED = 2.5;     // fast - closest to camera
+	private static final double MOUNTAIN_FAR_SPEED = 0.5;  // slow - far mountains
+	private static final double MOUNTAINS_SPEED = 1.0;     // medium - closer mountains
+	private static final double TREES_SPEED = 1.5;         // faster - mid-ground trees
+	private static final double FOREGROUND_SPEED = 2.5;    // fastest - closest to camera
 	
-	public Level2Panel() {
+	public Level1Panel() {
 		setDoubleBuffered(true);  // prevents flickering during repaint
 		loadLayers();
 		player1 = new Player1();
@@ -124,6 +132,7 @@ public class Level2Panel extends JPanel {
 		}
 	}
 	
+	/** Resets the level timer. Called when entering/replaying the level. */
 	public void resetTimer() {
 		levelStartTime = System.currentTimeMillis();
 		elapsedSeconds = 0;
@@ -132,10 +141,34 @@ public class Level2Panel extends JPanel {
 		scoreScreen.deactivate();
 	}
 	
+	/**
+	 * Spawns the tutorial enemy for this level.
+	 * Called from MainWindow when entering Level 1, after multiplayer mode is set.
+	 * @param multiplayer true if 2-player mode (enemy gets double HP)
+	 */
+	public void spawnTutorialEnemy(boolean multiplayer) {
+		tutorialEnemy = new TutorialEnemy(multiplayer);
+	}
+	
+	/** Returns the tutorial enemy instance (may be null). */
+	public TutorialEnemy getTutorialEnemy() {
+		return tutorialEnemy;
+	}
+	
+	/** Returns the score screen (for MainWindow to check if active). */
+	public ScoreScreen getScoreScreen() {
+		return scoreScreen;
+	}
+	
+	/** Returns elapsed seconds since level started. */
 	public double getElapsedSeconds() {
 		return elapsedSeconds;
 	}
 	
+	/**
+	 * Calculates score for a player: (damageDealt * DAMAGE_MULTIPLIER) - (elapsedSeconds * TIME_PENALTY).
+	 * Minimum score is 0.
+	 */
 	public int calculateScore(int damageDealt) {
 		double raw = (damageDealt * DAMAGE_MULTIPLIER) - (elapsedSeconds * TIME_PENALTY);
 		return Math.max(0, (int) raw);
@@ -151,28 +184,14 @@ public class Level2Panel extends JPanel {
 		return projectiles;
 	}
 	
-	/** Spawns the Final Boss for this level. Called from MainWindow on level entry. */
-	public void spawnFinalBoss(boolean multiplayer) {
-		finalBoss = new FinalBoss(multiplayer);
-	}
-	
-	/** Returns the Final Boss instance (may be null). */
-	public FinalBoss getFinalBoss() {
-		return finalBoss;
-	}
-	
-	/** Returns the score screen (for MainWindow to check if active). */
-	public ScoreScreen getScoreScreen() {
-		return scoreScreen;
-	}
-	
 	private void loadLayers() {
-		String basePath = "res/New Graphics/parallax-industrial-pack/parallax-industrial-pack/layers/";
+		String basePath = "res/New Graphics/parallax_mountain_pack/parallax_mountain_pack/layers/";
 		try {
-			bgLayer = ImageIO.read(new File(basePath + "skill-desc_0003_bg.png"));
-			farBuildingsLayer = ImageIO.read(new File(basePath + "skill-desc_0002_far-buildings.png"));
-			buildingsLayer = ImageIO.read(new File(basePath + "skill-desc_0001_buildings.png"));
-			foregroundLayer = ImageIO.read(new File(basePath + "skill-desc_0000_foreground.png"));
+			bgLayer = ImageIO.read(new File(basePath + "parallax-mountain-bg.png"));
+			mountainFarLayer = ImageIO.read(new File(basePath + "parallax-mountain-montain-far.png"));
+			mountainsLayer = ImageIO.read(new File(basePath + "parallax-mountain-mountains.png"));
+			treesLayer = ImageIO.read(new File(basePath + "parallax-mountain-trees.png"));
+			foregroundLayer = ImageIO.read(new File(basePath + "parallax-mountain-foreground-trees.png"));
 		} catch (IOException e) {
 			System.err.println("Error loading parallax layers: " + e.getMessage());
 			e.printStackTrace();
@@ -185,8 +204,9 @@ public class Level2Panel extends JPanel {
 	 */
 	public void updateParallax() {
 		bgOffset += BG_SPEED;
-		farBuildingsOffset += FAR_BUILDINGS_SPEED;
-		buildingsOffset += BUILDINGS_SPEED;
+		mountainFarOffset += MOUNTAIN_FAR_SPEED;
+		mountainsOffset += MOUNTAINS_SPEED;
+		treesOffset += TREES_SPEED;
 		foregroundOffset += FOREGROUND_SPEED;
 		
 		// Update elapsed time
@@ -203,20 +223,27 @@ public class Level2Panel extends JPanel {
 			player2.update();
 		}
 		
+		// Update the tutorial enemy (vertical oscillation or death slide)
+		if (tutorialEnemy != null && !tutorialEnemy.isDefeated()) {
+			tutorialEnemy.update();
+		}
+		
 		// Update all active projectiles (move right + animate)
-		// Check for collisions with the final boss, then remove off-screen ones
+		// Check for collisions with the tutorial enemy, then remove off-screen ones
 		Iterator<Projectile> it = projectiles.iterator();
 		while (it.hasNext()) {
 			Projectile p = it.next();
 			p.update();
 			
-			// --- Collision with final boss ---
-			if (finalBoss != null && finalBoss.isAlive() && finalBoss.collidesWith(p)) {
-				finalBoss.takeDamage(p.getDamage());
+			// --- Collision with tutorial enemy ---
+			if (tutorialEnemy != null && tutorialEnemy.isAlive() && tutorialEnemy.collidesWith(p)) {
+				// Deal damage to the enemy
+				tutorialEnemy.takeDamage(p.getDamage());
 				
 				// Track damage on the player who fired this projectile
 				if (p.getOwnerPlayer() == 1 && player1 != null) {
 					player1.addDamageDealt(p.getDamage());
+					// Only regular attacks charge the special meter
 					if (!p.isSpecial()) {
 						player1.addSpecialCharge(p.getDamage());
 					}
@@ -227,6 +254,7 @@ public class Level2Panel extends JPanel {
 					}
 				}
 				
+				// Remove the projectile (it hit something)
 				it.remove();
 				continue;
 			}
@@ -236,13 +264,8 @@ public class Level2Panel extends JPanel {
 			}
 		}
 		
-		// Update the final boss (entry animation, phase transitions, etc.)
-		if (finalBoss != null && !finalBoss.isDefeated()) {
-			finalBoss.update();
-		}
-		
-		// Check if the boss was just defeated — trigger score screen
-		if (finalBoss != null && finalBoss.isDefeated() && !scoreScreenTriggered) {
+		// Check if the tutorial enemy was just defeated — trigger score screen
+		if (tutorialEnemy != null && tutorialEnemy.isDefeated() && !scoreScreenTriggered) {
 			scoreScreenTriggered = true;
 			int p1Dmg = (player1 != null) ? player1.getDamageDealt() : 0;
 			int p2Dmg = (player2 != null) ? player2.getDamageDealt() : 0;
@@ -264,10 +287,11 @@ public class Level2Panel extends JPanel {
 		int panelWidth = getWidth();
 		int panelHeight = getHeight();
 		
-		// Draw layers back-to-front so closer layers paint over distant ones
+		// Draw each layer, tiled horizontally and scaled to fill the panel height
 		drawLayer(g2d, bgLayer, bgOffset, panelWidth, panelHeight);
-		drawLayer(g2d, farBuildingsLayer, farBuildingsOffset, panelWidth, panelHeight);
-		drawLayer(g2d, buildingsLayer, buildingsOffset, panelWidth, panelHeight);
+		drawLayer(g2d, mountainFarLayer, mountainFarOffset, panelWidth, panelHeight);
+		drawLayer(g2d, mountainsLayer, mountainsOffset, panelWidth, panelHeight);
+		drawLayer(g2d, treesLayer, treesOffset, panelWidth, panelHeight);
 		drawLayer(g2d, foregroundLayer, foregroundOffset, panelWidth, panelHeight);
 		
 		// Draw Player 1 on top of all parallax layers
@@ -284,9 +308,9 @@ public class Level2Panel extends JPanel {
 			p.draw(g2d);
 		}
 		
-		// Draw the Final Boss on top of projectiles
-		if (finalBoss != null && !finalBoss.isDefeated()) {
-			finalBoss.draw(g2d);
+		// Draw the tutorial enemy (on top of parallax, alongside players)
+		if (tutorialEnemy != null && !tutorialEnemy.isDefeated()) {
+			tutorialEnemy.draw(g2d);
 		}
 		
 		// ========== DRAW HUD (timer + HP) ==========
@@ -298,7 +322,13 @@ public class Level2Panel extends JPanel {
 		}
 	}
 	
+	/**
+	 * Draws the heads-up display: level timer (top-centre) and player HP bars.
+	 * The timer is always visible so players can track their time.
+	 * HP is shown as "P1 HP: ♥♥♥♥♥" near each player's area.
+	 */
 	private void drawHUD(Graphics2D g2d) {
+		// --- Timer (top-centre) ---
 		int minutes = (int) (elapsedSeconds / 60);
 		int seconds = (int) (elapsedSeconds % 60);
 		String timeText = String.format("Time: %02d:%02d", minutes, seconds);
@@ -308,6 +338,7 @@ public class Level2Panel extends JPanel {
 		int timeWidth = g2d.getFontMetrics().stringWidth(timeText);
 		g2d.drawString(timeText, (getWidth() - timeWidth) / 2, 40);
 		
+		// --- Player 1 HP (top-left) ---
 		if (player1 != null) {
 			String p1Text = "P1 HP: " + buildHPString(player1.getHp(), player1.getMaxHp());
 			g2d.setFont(new Font("Arial", Font.BOLD, 28));
@@ -315,6 +346,7 @@ public class Level2Panel extends JPanel {
 			g2d.drawString(p1Text, 15, 80);
 		}
 		
+		// --- Player 2 HP (below P1 HP, only in multiplayer) ---
 		if (player2 != null) {
 			String p2Text = "P2 HP: " + buildHPString(player2.getHp(), player2.getMaxHp());
 			g2d.setFont(new Font("Arial", Font.BOLD, 28));
@@ -323,10 +355,14 @@ public class Level2Panel extends JPanel {
 		}
 	}
 	
+	/**
+	 * Builds a heart-based HP string: filled hearts for remaining HP, empty for lost.
+	 * e.g. 3/5 HP → "♥♥♥♡♡"
+	 */
 	private String buildHPString(int current, int max) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < max; i++) {
-			sb.append(i < current ? "\u2665" : "\u2661");
+			sb.append(i < current ? "\u2665" : "\u2661");  // ♥ or ♡
 		}
 		return sb.toString();
 	}
