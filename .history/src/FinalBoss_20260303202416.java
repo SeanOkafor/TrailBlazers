@@ -42,7 +42,7 @@ public class FinalBoss {
 	private static final int PANEL_HEIGHT = 1000;
 	
 	// Health — each phase has BASE_HP_PER_PHASE, doubled in multiplayer
-	private static final int BASE_HP_PER_PHASE = 4000;
+	private static final int BASE_HP_PER_PHASE = 12500;
 	private static final int TOTAL_PHASES = 3;
 	
 	private int hpPerPhase;

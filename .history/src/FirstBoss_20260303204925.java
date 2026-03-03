@@ -41,7 +41,7 @@ public class FirstBoss {
 	private static final int PANEL_HEIGHT = 1000;
 	
 	// Health
-	private static final int BASE_HP_PER_PHASE = 5000;
+	private static final int BASE_HP_PER_PHASE = 5625;
 	private static final int TOTAL_PHASES = 2;
 	
 	private int hpPerPhase;
