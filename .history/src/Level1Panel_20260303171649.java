@@ -315,66 +315,82 @@ public class Level1Panel extends JPanel {
 		
 		int panelWidth = getWidth();
 		int panelHeight = getHeight();
-
-		// Draw parallax layers back to front
+		
+		// Draw each layer, tiled horizontally and scaled to fill the panel height
 		drawLayer(g2d, bgLayer, bgOffset, panelWidth, panelHeight);
 		drawLayer(g2d, mountainFarLayer, mountainFarOffset, panelWidth, panelHeight);
 		drawLayer(g2d, mountainsLayer, mountainsOffset, panelWidth, panelHeight);
 		drawLayer(g2d, treesLayer, treesOffset, panelWidth, panelHeight);
 		drawLayer(g2d, foregroundLayer, foregroundOffset, panelWidth, panelHeight);
-
+		
+		// Draw Player 1 on top of all parallax layers
 		if (player1 != null) {
 			player1.draw(g2d);
 		}
+		// Draw Player 2 (only in multiplayer mode)
 		if (player2 != null) {
 			player2.draw(g2d);
 		}
-
+		
+		// Draw all active projectiles on top of players
 		for (Projectile p : projectiles) {
 			p.draw(g2d);
 		}
-
+		
+		// Draw health packs
 		for (HealthPack hp : healthPacks) {
 			hp.draw(g2d);
 		}
-
+		
+		// Draw the tutorial enemy (on top of parallax, alongside players)
 		if (tutorialEnemy != null && !tutorialEnemy.isDefeated()) {
 			tutorialEnemy.draw(g2d);
 		}
-
+		
+		// Draw the first boss (after tutorial enemy is defeated)
 		if (firstBoss != null && !firstBoss.isDefeated()) {
 			firstBoss.draw(g2d);
 		}
-
+		
+		// ========== DRAW HUD (timer + HP) ==========
 		drawHUD(g2d);
-
-		// Overlay screens drawn on top of everything
+		
+		// ========== DRAW SCORE SCREEN (on top of everything) ==========
 		if (scoreScreen.isActive()) {
 			scoreScreen.draw(g2d);
 		}
+		
+		// ========== DRAW LOSER SCREEN (on top of everything) ==========
 		if (loserScreen.isActive()) {
 			loserScreen.draw(g2d);
 		}
 	}
 	
-	// Draws HUD: timer (MM:SS) top-centre, heart-based HP display (♥/♡) top-left
+	/**
+	 * Draws the heads-up display: level timer (top-centre) and player HP bars.
+	 * The timer is always visible so players can track their time.
+	 * HP is shown as "P1 HP: ♥♥♥♥♥" near each player's area.
+	 */
 	private void drawHUD(Graphics2D g2d) {
+		// --- Timer (top-centre) ---
 		int minutes = (int) (elapsedSeconds / 60);
 		int seconds = (int) (elapsedSeconds % 60);
 		String timeText = String.format("Time: %02d:%02d", minutes, seconds);
-
+		
 		g2d.setFont(new Font("Arial", Font.BOLD, 35));
 		g2d.setColor(Color.WHITE);
 		int timeWidth = g2d.getFontMetrics().stringWidth(timeText);
 		g2d.drawString(timeText, (getWidth() - timeWidth) / 2, 40);
-
+		
+		// --- Player 1 HP (top-left) ---
 		if (player1 != null) {
 			String p1Text = "P1 HP: " + buildHPString(player1.getHp(), player1.getMaxHp());
 			g2d.setFont(new Font("Arial", Font.BOLD, 28));
 			g2d.setColor(Color.RED);
 			g2d.drawString(p1Text, 15, 80);
 		}
-
+		
+		// --- Player 2 HP (below P1 HP, only in multiplayer) ---
 		if (player2 != null) {
 			String p2Text = "P2 HP: " + buildHPString(player2.getHp(), player2.getMaxHp());
 			g2d.setFont(new Font("Arial", Font.BOLD, 28));
@@ -382,35 +398,51 @@ public class Level1Panel extends JPanel {
 			g2d.drawString(p2Text, 15, 115);
 		}
 	}
-
-	// Builds heart string: ♥ for remaining HP, ♡ for lost (e.g. 3/5 → "♥♥♥♡♡")
+	
+	/**
+	 * Builds a heart-based HP string: filled hearts for remaining HP, empty for lost.
+	 * e.g. 3/5 HP → "♥♥♥♡♡"
+	 */
 	private String buildHPString(int current, int max) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < max; i++) {
-			sb.append(i < current ? "\u2665" : "\u2661");
+			sb.append(i < current ? "\u2665" : "\u2661");  // ♥ or ♡
 		}
 		return sb.toString();
 	}
-
-	// Draws one parallax layer: scales image to panel height (preserving aspect ratio),
-	// tiles horizontally, and wraps offset via modulo for seamless looping.
+	
+	/**
+	 * Draws a single parallax layer, tiled horizontally and scrolling left.
+	 * 
+	 * How it works:
+	 * - The small layer image (e.g. 272x160) is scaled to fill the full panel height (1000px)
+	 * - The scaled width is calculated proportionally (maintains aspect ratio)
+	 * - The image is tiled (repeated) horizontally across the panel
+	 * - The offset shifts all tiles left, creating the scrolling effect
+	 * - Modulo wrapping ensures seamless infinite looping
+	 */
 	private void drawLayer(Graphics2D g2d, BufferedImage layer, double offset, int panelWidth, int panelHeight) {
 		if (layer == null) return;
-
-		// Scale layer to fill panel height; compute proportional tile width
+		
+		// Step 1: Scale the tiny layer image to fill the panel height
+		// e.g. if layer is 272x160 and panel is 1000px tall:
+		//   scale = 1000 / 160 = 6.25
+		//   scaledWidth = 272 * 6.25 = 1700px
 		double scale = (double) panelHeight / layer.getHeight();
 		int scaledWidth = (int) (layer.getWidth() * scale);
-
-		// Modulo wrap offset so it loops seamlessly at scaledWidth
+		
+		// Step 2: Wrap offset using modulo so it loops seamlessly
+		// When offset reaches scaledWidth, it resets to 0
 		double wrappedOffset = offset % scaledWidth;
-
-		// Tile from -wrappedOffset rightward across the panel
+		
+		// Step 3: Tile the image from left to right, shifted by the offset
+		// Starting at -wrappedOffset ensures smooth leftward scrolling
 		int startX = (int) -wrappedOffset;
 		for (int x = startX; x < panelWidth; x += scaledWidth) {
 			g2d.drawImage(layer, x, 0, scaledWidth, panelHeight, null);
 		}
-
-		// Fill any gap on the left edge
+		
+		// Step 4: Fill any gap on the left edge with one extra tile
 		if (startX > 0) {
 			g2d.drawImage(layer, startX - scaledWidth, 0, scaledWidth, panelHeight, null);
 		}

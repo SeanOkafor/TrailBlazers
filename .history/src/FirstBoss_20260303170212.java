@@ -615,7 +615,7 @@ public class FirstBoss {
 		}
 	}
 	
-	// Fires a forkable bolt from boss's left edge
+	/** Fires a single bolt from the boss's left edge that will fork at mid-screen. */
 	private void fireP2ForkingBolt() {
 		double spawnX = x;
 		double spawnY = y + (DISPLAY_HEIGHT / 2.0) - (P2A2_BOLT_HEIGHT / 2.0);
@@ -630,7 +630,7 @@ public class FirstBoss {
 		p2a2ForkableBolts.add(bolt);
 	}
 	
-	// Forks bolts into 3 at x=500: original continues + two at ±20° (cos/sin splitting)
+	/** When a forkable bolt reaches mid-screen, it splits into 3 (straight + ±20°). */
 	private void checkP2A2Forks() {
 		List<EnemyProjectile> newBolts = new ArrayList<>();
 		Iterator<EnemyProjectile> it = p2a2ForkableBolts.iterator();
@@ -665,14 +665,15 @@ public class FirstBoss {
 				);
 				newBolts.add(downBolt);
 				
-				it.remove();  // stop tracking; original continues straight
+				it.remove();  // original continues straight, just stop tracking it
 			}
 		}
 		
 		enemyProjectiles.addAll(newBolts);
 	}
 	
-	// Dispatches to the correct attack update based on phase and attack index
+	// ========== ATTACK DISPATCHER ==========
+	
 	private void updateCurrentAttack() {
 		if (currentPhase == 0) {
 			if (currentAttack == 0) updateAttack1();
@@ -683,7 +684,8 @@ public class FirstBoss {
 		}
 	}
 	
-	// Moves boss back towards home position after an attack
+	// ========== RETURNING TO HOME POSITION ==========
+	
 	private void updateReturning() {
 		boolean atHome = true;
 		
@@ -714,7 +716,8 @@ public class FirstBoss {
 		}
 	}
 	
-	// Advances sprite animation frame
+	// ========== ANIMATION ==========
+	
 	private void advanceAnimation() {
 		animationTick++;
 		if (animationTick >= ANIMATION_DELAY) {
@@ -723,16 +726,19 @@ public class FirstBoss {
 		}
 	}
 	
-	// Draws boss, damage flash, health bar, and projectiles
+	// ========== DRAW ==========
+	
 	public void draw(Graphics2D g2d) {
 		if (state == State.DEFEATED || state == State.WAITING) return;
 		
-		// Hide boss sprite when off-screen during slide-off attacks
+		// Hide boss sprite while it's sliding off screen during Attack 2
 		boolean drawBoss = true;
+		// Hide boss during Phase 1 Attack 2 slide-off
 		if (state == State.ATTACKING && currentPhase == 0 && currentAttack == 1
 		    && atk2SubState == Attack2SubState.SLIDE_OFF && x > PANEL_WIDTH) {
 			drawBoss = false;
 		}
+		// Hide boss during Phase 2 Attack 1 slide-off
 		if (state == State.ATTACKING && currentPhase == 1 && currentAttack == 0
 		    && p2a1SubState == P2Atk1SubState.SLIDE_OFF && x > PANEL_WIDTH) {
 			drawBoss = false;
@@ -744,7 +750,7 @@ public class FirstBoss {
 			if (sprite != null) {
 				g2d.drawImage(sprite, x, y, DISPLAY_WIDTH, DISPLAY_HEIGHT, null);
 				
-				// Damage flash — SRC_IN compositing tints sprite red, overlaid with alpha
+				// Damage flash
 				if (damageFlashTimer > 0) {
 					BufferedImage flashImage = new BufferedImage(DISPLAY_WIDTH, DISPLAY_HEIGHT, BufferedImage.TYPE_INT_ARGB);
 					Graphics2D flashG = flashImage.createGraphics();
@@ -771,7 +777,8 @@ public class FirstBoss {
 		}
 	}
 	
-	// Draws health bar with colour transition: green → yellow → red
+	// ========== HEALTH BAR ==========
+	
 	private void drawHealthBar(Graphics2D g2d) {
 		int barX = x + (DISPLAY_WIDTH - HEALTH_BAR_WIDTH) / 2;
 		int barY = y + HEALTH_BAR_Y_OFFSET;
@@ -801,7 +808,6 @@ public class FirstBoss {
 		g2d.drawString(hpText, barX + (HEALTH_BAR_WIDTH - textWidth) / 2, barY + 17);
 	}
 	
-	// Draws phase indicator text above health bar
 	private void drawPhaseIndicator(Graphics2D g2d) {
 		int textX = x + (DISPLAY_WIDTH / 2);
 		int textY = y + HEALTH_BAR_Y_OFFSET - 8;
@@ -813,7 +819,8 @@ public class FirstBoss {
 		g2d.drawString(phaseText, textX - textWidth / 2, textY);
 	}
 	
-	// Applies damage; triggers phase transition (SLIDING) when phase HP is depleted
+	// ========== DAMAGE ==========
+	
 	public void takeDamage(int amount) {
 		if (state != State.IDLE && state != State.ATTACKING && state != State.RETURNING) return;
 		
@@ -830,13 +837,13 @@ public class FirstBoss {
 		}
 	}
 	
-	// Calculates remaining HP across future phases
 	private int getRemainingPhasesHp() {
 		int remainingPhases = (TOTAL_PHASES - 1) - currentPhase;
 		return remainingPhases * hpPerPhase;
 	}
 	
-	// AABB collision with inset hitbox; only active during IDLE/ATTACKING/RETURNING
+	// ========== COLLISION ==========
+	
 	public boolean collidesWith(Projectile p) {
 		if (state != State.IDLE && state != State.ATTACKING && state != State.RETURNING) return false;
 		
@@ -851,7 +858,8 @@ public class FirstBoss {
 		       p.getY() + p.getDisplayHeight() > hitY;
 	}
 	
-	// Getters
+	// ========== GETTERS ==========
+	
 	public boolean isAlive() {
 		return state == State.IDLE || state == State.ATTACKING || state == State.RETURNING;
 	}
@@ -868,7 +876,7 @@ public class FirstBoss {
 	public int getDisplayWidth() { return DISPLAY_WIDTH; }
 	public int getDisplayHeight() { return DISPLAY_HEIGHT; }
 	
-	// Active enemy projectiles for collision checking
+	/** Returns the list of active enemy projectiles for collision checking. */
 	public List<EnemyProjectile> getEnemyProjectiles() {
 		return enemyProjectiles;
 	}

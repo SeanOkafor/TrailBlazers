@@ -811,31 +811,36 @@ public class FinalBoss {
 		g2d.drawRect(barX, barY, barW, barH);
 	}
 	
-	// Draws shared health bar above the boss — total HP across all 3 phases
+	/**
+	 * Draws the shared health bar above the boss sprite.
+	 * The bar represents total HP across all 3 phases (out of 75,000).
+	 */
 	private void drawHealthBar(Graphics2D g2d) {
 		int barX = x + (DISPLAY_WIDTH - HEALTH_BAR_WIDTH) / 2;
 		int barY = y + HEALTH_BAR_Y_OFFSET;
 		
+		// Background (dark grey)
 		g2d.setColor(new Color(50, 50, 50));
 		g2d.fillRect(barX, barY, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT);
 		
-		// Fill colour: green >50%, yellow 20-50%, red <20%
+		// Fill based on total HP ratio
 		double hpRatio = (double) totalHp / totalMaxHp;
 		int fillWidth = (int) (HEALTH_BAR_WIDTH * hpRatio);
 		
 		if (hpRatio > 0.5) {
-			g2d.setColor(new Color(50, 205, 50));
+			g2d.setColor(new Color(50, 205, 50));   // green
 		} else if (hpRatio > 0.2) {
-			g2d.setColor(new Color(255, 200, 0));
+			g2d.setColor(new Color(255, 200, 0));   // yellow
 		} else {
-			g2d.setColor(new Color(220, 30, 30));
+			g2d.setColor(new Color(220, 30, 30));   // red
 		}
 		g2d.fillRect(barX, barY, fillWidth, HEALTH_BAR_HEIGHT);
 		
+		// Border (white)
 		g2d.setColor(Color.WHITE);
 		g2d.drawRect(barX, barY, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT);
 		
-		// HP text centred on bar
+		// HP text
 		g2d.setFont(new Font("Arial", Font.BOLD, 14));
 		String hpText = totalHp + " / " + totalMaxHp;
 		int textWidth = g2d.getFontMetrics().stringWidth(hpText);
@@ -843,7 +848,9 @@ public class FinalBoss {
 		g2d.drawString(hpText, barX + (HEALTH_BAR_WIDTH - textWidth) / 2, barY + 17);
 	}
 	
-	// Draws "Phase X / 3" label above the health bar
+	/**
+	 * Draws a small "Phase X" label below the health bar.
+	 */
 	private void drawPhaseIndicator(Graphics2D g2d) {
 		int textX = x + (DISPLAY_WIDTH / 2);
 		int textY = y + HEALTH_BAR_Y_OFFSET - 8;
@@ -855,7 +862,13 @@ public class FinalBoss {
 		g2d.drawString(phaseText, textX - textWidth / 2, textY);
 	}
 	
-	// Deals damage; only in IDLE/ATTACKING/RETURNING states. Triggers phase slide-off at 0 HP.
+	/**
+	 * Deals damage to the boss. Only works when the boss is in ACTIVE state.
+	 * When the current phase's HP reaches 0, the boss begins sliding off screen.
+	 * The health bar locks during transitions.
+	 * 
+	 * @param amount Damage to deal
+	 */
 	public void takeDamage(int amount) {
 		if (state != State.IDLE && state != State.ATTACKING && state != State.RETURNING) return;
 		
@@ -875,13 +888,19 @@ public class FinalBoss {
 		}
 	}
 	
-	// HP from phases that haven't started yet (e.g. phase 0 → phases 1+2 still full)
+	/**
+	 * Calculates HP from phases that haven't started yet.
+	 * e.g. if currentPhase=0, phases 1 and 2 still have full HP = 50,000
+	 */
 	private int getRemainingPhasesHp() {
 		int remainingPhases = (TOTAL_PHASES - 1) - currentPhase;
 		return remainingPhases * hpPerPhase;
 	}
 	
-	// AABB collision with insets; only registers in IDLE/ATTACKING/RETURNING states
+	/**
+	 * AABB collision check with collision insets (same as Tutorial Enemy).
+	 * Only registers hits when the boss is in ACTIVE state.
+	 */
 	public boolean collidesWith(Projectile p) {
 		if (state != State.IDLE && state != State.ATTACKING && state != State.RETURNING) return false;
 		
@@ -896,23 +915,29 @@ public class FinalBoss {
 		       p.getY() + p.getDisplayHeight() > hitY;
 	}
 	
-	// Getters
+	// ========== GETTERS ==========
+	
+	/** Returns true if the boss is in ACTIVE state and can be hit. */
 	public boolean isAlive() {
 		return state == State.IDLE || state == State.ATTACKING || state == State.RETURNING;
 	}
 	
+	/** Returns true if all 3 phases have been defeated. */
 	public boolean isDefeated() {
 		return state == State.DEFEATED;
 	}
 	
+	/** Current phase (0-indexed: 0 = phase 1, 1 = phase 2, 2 = phase 3). */
 	public int getCurrentPhase() {
 		return currentPhase;
 	}
 	
+	/** Total HP remaining across all phases. */
 	public int getTotalHp() {
 		return totalHp;
 	}
 	
+	/** Maximum total HP (75,000 single / 150,000 multiplayer). */
 	public int getTotalMaxHp() {
 		return totalMaxHp;
 	}
@@ -921,5 +946,9 @@ public class FinalBoss {
 	public int getY() { return y; }
 	public int getDisplayWidth() { return DISPLAY_WIDTH; }
 	public int getDisplayHeight() { return DISPLAY_HEIGHT; }
-	public List<EnemyProjectile> getEnemyProjectiles() { return enemyProjectiles; }
+	
+	/** Returns the list of active enemy projectiles for collision checking. */
+	public List<EnemyProjectile> getEnemyProjectiles() {
+		return enemyProjectiles;
+	}
 }

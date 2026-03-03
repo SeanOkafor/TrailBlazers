@@ -631,11 +631,11 @@ public class FinalBoss {
 			targetX = player1.getX() + player1.getDisplayWidth() / 2;
 			targetY = player1.getY() + player1.getDisplayHeight() / 2;
 		} else {
-			bolt.setSpeedX(-MB_BOLT_SPEED);  // fallback: aim left
+			// Fallback: aim left
+			bolt.setSpeedX(-MB_BOLT_SPEED);
 			return;
 		}
 		
-		// Normalised direction vector × bolt speed
 		double boltCX = bolt.getX() + MB_BOLT_WIDTH / 2.0;
 		double boltCY = bolt.getY() + MB_BOLT_HEIGHT / 2.0;
 		double dx = targetX - boltCX;
@@ -650,7 +650,10 @@ public class FinalBoss {
 		}
 	}
 	
-	// Deals damage to mini boss; triggers defeat timer when HP reaches 0
+	/**
+	 * Called by Level2Panel when a player projectile hits the mini boss.
+	 * When HP reaches 0, the mini boss dies and the defeat timer starts.
+	 */
 	public void damageMiniBoss(int amount) {
 		if (!miniBossAlive) return;
 		miniBossHp -= amount;
@@ -660,12 +663,13 @@ public class FinalBoss {
 			miniBossHp = 0;
 			miniBossAlive = false;
 			miniBossDefeatTimer = MINI_BOSS_DEFEAT_DELAY;
-			mbPendingBolts.clear();  // clear pending; launched bolts keep flying
+			// Clear any pending bolts (already-launched ones keep flying)
+			mbPendingBolts.clear();
 			mbPendingTimers.clear();
 		}
 	}
 	
-	// AABB collision for mini boss hitbox (20px insets)
+	/** AABB collision check for the mini boss hitbox. */
 	public boolean miniBossCollidesWith(Projectile p) {
 		if (!miniBossAlive) return false;
 		
@@ -680,9 +684,11 @@ public class FinalBoss {
 		       p.getY() + p.getDisplayHeight() > hitY;
 	}
 	
+	/** Returns true if the mini boss is currently alive and active. */
 	public boolean isMiniBossAlive() { return miniBossAlive; }
 	
-	// Moves boss back toward home position; transitions to IDLE on arrival
+	// ========== RETURNING TO HOME POSITION ==========
+	
 	private void updateReturning() {
 		boolean atHome = true;
 		
@@ -713,10 +719,13 @@ public class FinalBoss {
 		}
 	}
 	
-	// Draws boss sprite, health bar, phase indicator, projectiles, and mini boss
+	/**
+	 * Draws the current phase's animated sprite and the shared health bar.
+	 */
 	public void draw(Graphics2D g2d) {
 		if (state == State.DEFEATED || state == State.WAITING) return;
 		
+		// Determine whether to draw the boss body this frame
 		boolean drawBoss = true;
 		// Hide during Charge/Ram slide-off when off screen right
 		if (state == State.ATTACKING && currentAttack == 1
@@ -730,7 +739,7 @@ public class FinalBoss {
 			if (sprite != null) {
 				g2d.drawImage(sprite, x, y, DISPLAY_WIDTH, DISPLAY_HEIGHT, null);
 				
-				// Damage flash: draw red-tinted copy via SRC_IN compositing
+				// Damage flash
 				if (damageFlashTimer > 0) {
 					BufferedImage flashImage = new BufferedImage(DISPLAY_WIDTH, DISPLAY_HEIGHT, BufferedImage.TYPE_INT_ARGB);
 					Graphics2D flashG = flashImage.createGraphics();
@@ -751,19 +760,19 @@ public class FinalBoss {
 			drawPhaseIndicator(g2d);
 		}
 		
-		// Always draw projectiles
+		// Always draw enemy projectiles
 		for (EnemyProjectile ep : enemyProjectiles) {
 			ep.draw(g2d);
 		}
 		
-		// Draw mini boss if alive (Phase 3 Attack 4)
+		// Draw mini boss (if alive during Phase 3 Attack 4)
 		if (miniBossAlive) {
 			BufferedImage mbSprite = p3MiniBossFrames[miniBossFrame];
 			if (mbSprite != null) {
 				g2d.drawImage(mbSprite, miniBossX, miniBossY,
 				              MINI_BOSS_DISPLAY_W, MINI_BOSS_DISPLAY_H, null);
 				
-				// Mini boss damage flash (same SRC_IN technique)
+				// Damage flash
 				if (miniBossDmgFlash > 0) {
 					BufferedImage flash = new BufferedImage(MINI_BOSS_DISPLAY_W, MINI_BOSS_DISPLAY_H,
 					                                        BufferedImage.TYPE_INT_ARGB);
@@ -779,23 +788,27 @@ public class FinalBoss {
 					g2d.drawImage(flash, miniBossX, miniBossY, null);
 					g2d.setComposite(oc);
 				}
+				
 				// Mini boss health bar
 				drawMiniBossHealthBar(g2d);
 			}
 		}
 	}
 	
-	// Draws mini boss health bar with colour transitions
+	/**
+	 * Draws a health bar above the mini boss.
+	 */
 	private void drawMiniBossHealthBar(Graphics2D g2d) {
 		int barW = 120;
 		int barH = 10;
 		int barX = miniBossX + (MINI_BOSS_DISPLAY_W - barW) / 2;
 		int barY = miniBossY - 16;
 		
+		// Background
 		g2d.setColor(new Color(50, 50, 50));
 		g2d.fillRect(barX, barY, barW, barH);
 		
-		// Fill colour: green >50%, yellow 20-50%, red <20%
+		// Fill
 		double ratio = (double) miniBossHp / MINI_BOSS_MAX_HP;
 		int fillW = (int) (barW * ratio);
 		if (ratio > 0.5) {
@@ -807,35 +820,41 @@ public class FinalBoss {
 		}
 		g2d.fillRect(barX, barY, fillW, barH);
 		
+		// Border
 		g2d.setColor(Color.WHITE);
 		g2d.drawRect(barX, barY, barW, barH);
 	}
 	
-	// Draws shared health bar above the boss — total HP across all 3 phases
+	/**
+	 * Draws the shared health bar above the boss sprite.
+	 * The bar represents total HP across all 3 phases (out of 75,000).
+	 */
 	private void drawHealthBar(Graphics2D g2d) {
 		int barX = x + (DISPLAY_WIDTH - HEALTH_BAR_WIDTH) / 2;
 		int barY = y + HEALTH_BAR_Y_OFFSET;
 		
+		// Background (dark grey)
 		g2d.setColor(new Color(50, 50, 50));
 		g2d.fillRect(barX, barY, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT);
 		
-		// Fill colour: green >50%, yellow 20-50%, red <20%
+		// Fill based on total HP ratio
 		double hpRatio = (double) totalHp / totalMaxHp;
 		int fillWidth = (int) (HEALTH_BAR_WIDTH * hpRatio);
 		
 		if (hpRatio > 0.5) {
-			g2d.setColor(new Color(50, 205, 50));
+			g2d.setColor(new Color(50, 205, 50));   // green
 		} else if (hpRatio > 0.2) {
-			g2d.setColor(new Color(255, 200, 0));
+			g2d.setColor(new Color(255, 200, 0));   // yellow
 		} else {
-			g2d.setColor(new Color(220, 30, 30));
+			g2d.setColor(new Color(220, 30, 30));   // red
 		}
 		g2d.fillRect(barX, barY, fillWidth, HEALTH_BAR_HEIGHT);
 		
+		// Border (white)
 		g2d.setColor(Color.WHITE);
 		g2d.drawRect(barX, barY, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT);
 		
-		// HP text centred on bar
+		// HP text
 		g2d.setFont(new Font("Arial", Font.BOLD, 14));
 		String hpText = totalHp + " / " + totalMaxHp;
 		int textWidth = g2d.getFontMetrics().stringWidth(hpText);
@@ -843,7 +862,9 @@ public class FinalBoss {
 		g2d.drawString(hpText, barX + (HEALTH_BAR_WIDTH - textWidth) / 2, barY + 17);
 	}
 	
-	// Draws "Phase X / 3" label above the health bar
+	/**
+	 * Draws a small "Phase X" label below the health bar.
+	 */
 	private void drawPhaseIndicator(Graphics2D g2d) {
 		int textX = x + (DISPLAY_WIDTH / 2);
 		int textY = y + HEALTH_BAR_Y_OFFSET - 8;
@@ -855,7 +876,13 @@ public class FinalBoss {
 		g2d.drawString(phaseText, textX - textWidth / 2, textY);
 	}
 	
-	// Deals damage; only in IDLE/ATTACKING/RETURNING states. Triggers phase slide-off at 0 HP.
+	/**
+	 * Deals damage to the boss. Only works when the boss is in ACTIVE state.
+	 * When the current phase's HP reaches 0, the boss begins sliding off screen.
+	 * The health bar locks during transitions.
+	 * 
+	 * @param amount Damage to deal
+	 */
 	public void takeDamage(int amount) {
 		if (state != State.IDLE && state != State.ATTACKING && state != State.RETURNING) return;
 		
@@ -875,13 +902,19 @@ public class FinalBoss {
 		}
 	}
 	
-	// HP from phases that haven't started yet (e.g. phase 0 → phases 1+2 still full)
+	/**
+	 * Calculates HP from phases that haven't started yet.
+	 * e.g. if currentPhase=0, phases 1 and 2 still have full HP = 50,000
+	 */
 	private int getRemainingPhasesHp() {
 		int remainingPhases = (TOTAL_PHASES - 1) - currentPhase;
 		return remainingPhases * hpPerPhase;
 	}
 	
-	// AABB collision with insets; only registers in IDLE/ATTACKING/RETURNING states
+	/**
+	 * AABB collision check with collision insets (same as Tutorial Enemy).
+	 * Only registers hits when the boss is in ACTIVE state.
+	 */
 	public boolean collidesWith(Projectile p) {
 		if (state != State.IDLE && state != State.ATTACKING && state != State.RETURNING) return false;
 		
@@ -896,23 +929,29 @@ public class FinalBoss {
 		       p.getY() + p.getDisplayHeight() > hitY;
 	}
 	
-	// Getters
+	// ========== GETTERS ==========
+	
+	/** Returns true if the boss is in ACTIVE state and can be hit. */
 	public boolean isAlive() {
 		return state == State.IDLE || state == State.ATTACKING || state == State.RETURNING;
 	}
 	
+	/** Returns true if all 3 phases have been defeated. */
 	public boolean isDefeated() {
 		return state == State.DEFEATED;
 	}
 	
+	/** Current phase (0-indexed: 0 = phase 1, 1 = phase 2, 2 = phase 3). */
 	public int getCurrentPhase() {
 		return currentPhase;
 	}
 	
+	/** Total HP remaining across all phases. */
 	public int getTotalHp() {
 		return totalHp;
 	}
 	
+	/** Maximum total HP (75,000 single / 150,000 multiplayer). */
 	public int getTotalMaxHp() {
 		return totalMaxHp;
 	}
@@ -921,5 +960,9 @@ public class FinalBoss {
 	public int getY() { return y; }
 	public int getDisplayWidth() { return DISPLAY_WIDTH; }
 	public int getDisplayHeight() { return DISPLAY_HEIGHT; }
-	public List<EnemyProjectile> getEnemyProjectiles() { return enemyProjectiles; }
+	
+	/** Returns the list of active enemy projectiles for collision checking. */
+	public List<EnemyProjectile> getEnemyProjectiles() {
+		return enemyProjectiles;
+	}
 }
